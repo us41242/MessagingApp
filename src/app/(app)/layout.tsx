@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SidebarConversations } from "@/components/SidebarConversations";
+import { NewMessageWatcher } from "@/components/NewMessageWatcher";
 import { fetchConversationsForUser } from "@/lib/conversations";
 
 // Layout reads cookies + per-user data; force dynamic so Next 16 doesn't
@@ -35,7 +36,7 @@ export default async function AppLayout({
           </Link>
         </header>
         <SidebarConversations conversations={list} />
-        <footer className="border-t border-zinc-200 p-3 text-xs text-zinc-500 dark:border-zinc-800">
+        <footer className="space-y-2 border-t border-zinc-200 p-3 text-xs text-zinc-500 dark:border-zinc-800">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate">{userData.user.email}</span>
             <form action="/auth/signout" method="post">
@@ -44,6 +45,10 @@ export default async function AppLayout({
               </button>
             </form>
           </div>
+          <NewMessageWatcher
+            meId={userData.user.id}
+            email={userData.user.email ?? null}
+          />
         </footer>
       </aside>
       <section className="flex flex-1 flex-col overflow-hidden">{children}</section>
