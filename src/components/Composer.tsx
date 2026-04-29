@@ -241,7 +241,7 @@ export function Composer({
   }
 
   return (
-    <footer className="border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <footer className="border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 md:px-4 md:py-3 dark:border-zinc-800 dark:bg-zinc-950">
       {pending.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {pending.map((p, i) => (
@@ -289,7 +289,7 @@ export function Composer({
           e.preventDefault();
           handleSend();
         }}
-        className="mx-auto flex max-w-3xl items-end gap-2"
+        className="mx-auto flex max-w-3xl items-end gap-1 md:gap-2"
       >
         <input
           ref={fileInputRef}

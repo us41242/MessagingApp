@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -166,15 +167,32 @@ export function Thread({
   ]);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="relative flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold tracking-tight">
-              {headerTitle}
-            </h2>
-          </div>
-          <div className="flex items-center gap-1">
+        <header className="flex items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2.5 md:px-4 md:py-3 dark:border-zinc-800 dark:bg-zinc-950">
+          <Link
+            href="/"
+            aria-label="Back to messages"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100 md:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                d="m15 18-6-6 6-6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight md:text-base">
+            {headerTitle}
+          </h2>
+          <div className="flex shrink-0 items-center gap-1">
             <DrawerTabButton
               active={drawerTab === "search"}
               onClick={() =>
@@ -224,23 +242,34 @@ export function Thread({
       </div>
 
       {drawerTab !== "closed" ? (
-        <ThreadDrawer
-          tab={drawerTab}
-          conversationId={conversationId}
-          messages={messages}
-          onClose={() => setDrawerTab("closed")}
-          onJump={(messageId) => {
-            const el = document.getElementById(`msg-${messageId}`);
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "center" });
-              el.classList.add("ring-2", "ring-amber-400");
-              setTimeout(
-                () => el.classList.remove("ring-2", "ring-amber-400"),
-                1500
-              );
-            }
-          }}
-        />
+        <>
+          {/* Tap-out backdrop on mobile */}
+          <button
+            type="button"
+            aria-label="Close panel"
+            onClick={() => setDrawerTab("closed")}
+            className="absolute inset-0 z-10 bg-black/30 md:hidden"
+          />
+          <div className="absolute inset-y-0 right-0 z-20 w-[min(20rem,100vw)] md:relative md:w-80">
+            <ThreadDrawer
+              tab={drawerTab}
+              conversationId={conversationId}
+              messages={messages}
+              onClose={() => setDrawerTab("closed")}
+              onJump={(messageId) => {
+                const el = document.getElementById(`msg-${messageId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  el.classList.add("ring-2", "ring-amber-400");
+                  setTimeout(
+                    () => el.classList.remove("ring-2", "ring-amber-400"),
+                    1500
+                  );
+                }
+              }}
+            />
+          </div>
+        </>
       ) : null}
     </div>
   );

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Thread } from "@/components/Thread";
 import type { MessageWithAttachments } from "@/lib/supabase/types";
 
+export const dynamic = "force-dynamic";
+
 const PAGE_SIZE = 80;
 
 export default async function ConversationPage({
