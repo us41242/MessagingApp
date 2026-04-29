@@ -54,12 +54,12 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
   switch (attachment.kind) {
     case "image":
       return (
-        <a href={url} target="_blank" rel="noreferrer">
+        <a href={url} target="_blank" rel="noreferrer" className="block max-w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
             alt={attachment.file_name || ""}
-            className="max-h-80 max-w-sm rounded-xl object-cover"
+            className="max-h-80 max-w-full rounded-xl object-cover md:max-w-sm"
             loading="lazy"
             style={
               attachment.width && attachment.height
@@ -77,7 +77,7 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
         <img
           src={url}
           alt={attachment.file_name || ""}
-          className="max-h-80 max-w-sm rounded-xl"
+          className="max-h-80 max-w-full rounded-xl md:max-w-sm"
           loading="lazy"
         />
       );
@@ -88,7 +88,7 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
           poster={thumb || undefined}
           controls
           preload="metadata"
-          className="max-h-96 max-w-md rounded-xl bg-black"
+          className="max-h-[60vh] w-full max-w-full rounded-xl bg-black md:max-h-96 md:max-w-md"
         />
       );
     case "audio":
@@ -98,7 +98,7 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
           src={url}
           controls
           preload="metadata"
-          className="w-72"
+          className="w-full max-w-72"
         />
       );
     case "sticker":
@@ -107,7 +107,7 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
         <img
           src={url}
           alt=""
-          className="h-32 w-32 rounded-md"
+          className="h-32 w-32 max-w-full rounded-md"
           loading="lazy"
         />
       );
@@ -118,7 +118,7 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="flex max-w-sm items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+          className="flex w-full max-w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm hover:bg-zinc-50 md:max-w-sm dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
         >
           <FileIcon />
           <div className="min-w-0 flex-1">

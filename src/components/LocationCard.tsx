@@ -24,9 +24,9 @@ export function LocationCard({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="block overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow dark:border-zinc-800 dark:bg-zinc-900"
+      className="block w-full max-w-72 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow dark:border-zinc-800 dark:bg-zinc-900"
     >
-      <div className="h-40 w-72">
+      <div className="h-40 w-full">
         <MapPreview lat={lat} lng={lng} />
       </div>
       <div className="px-3 py-2">

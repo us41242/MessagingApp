@@ -40,7 +40,7 @@ export function MessageBubble({
       }`}
     >
       <div
-        className={`flex max-w-[80%] flex-col ${
+        className={`flex min-w-0 max-w-[85%] flex-col md:max-w-[75%] ${
           isMine ? "items-end" : "items-start"
         }`}
       >

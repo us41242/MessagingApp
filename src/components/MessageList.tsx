@@ -52,9 +52,9 @@ export function MessageList({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-black"
+      className="flex-1 overflow-y-auto overflow-x-hidden bg-zinc-50 dark:bg-black"
     >
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mx-auto w-full max-w-3xl px-3 py-6 md:px-4">
         {messages.length === 0 ? (
           <div className="py-20 text-center text-sm text-zinc-500">
             Say hello.
