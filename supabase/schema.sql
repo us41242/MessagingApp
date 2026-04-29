@@ -364,6 +364,20 @@ create policy "media delete owner" on storage.objects
     bucket_id = 'media' and owner = auth.uid()
   );
 
+-- --------- 8b. BACKFILL ---------------------------------------------------
+-- The handle_new_user trigger only fires for *new* auth.users. If users
+-- signed up before this schema was applied (or if profiles got cleared),
+-- they'd have an auth row but no profiles row, which makes any FK
+-- pointing to profiles.id (e.g. conversation_members) blow up. This
+-- catches everyone we already know about.
+insert into public.profiles (id, display_name)
+select
+  au.id,
+  coalesce(au.raw_user_meta_data->>'display_name', split_part(au.email, '@', 1))
+from auth.users au
+left join public.profiles p on p.id = au.id
+where p.id is null;
+
 -- --------- 9. REALTIME ----------------------------------------------------
 -- Enable realtime publication for messages + attachments
 alter publication supabase_realtime add table public.messages;
