@@ -15,6 +15,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Messages",
   description: "Person-to-person messaging",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Messages",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport = {

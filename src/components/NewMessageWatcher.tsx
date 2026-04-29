@@ -64,6 +64,31 @@ export function NewMessageWatcher({
     }
   }, []);
 
+  // Register the service worker once, then ensure we have a fresh push
+  // subscription on the server if the user has already granted permission
+  // (covers reinstalls, key rotation, new browsers).
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let cancelled = false;
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(async () => {
+        if (cancelled) return;
+        if (
+          typeof Notification !== "undefined" &&
+          Notification.permission === "granted"
+        ) {
+          await ensurePushSubscription().catch(() => {});
+        }
+      })
+      .catch(() => {
+        // SW registration can fail on insecure origins or quirky browsers — fine.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Web Audio needs a user gesture before it will play. Treat the
   // "Enable sound" interaction as that gesture, and detect via a sentinel.
   // (If the user has already interacted with the page in any way and we
@@ -179,6 +204,9 @@ export function NewMessageWatcher({
           if (typeof Notification === "undefined") return;
           const result = await Notification.requestPermission();
           setPermission(result);
+          if (result === "granted") {
+            await ensurePushSubscription().catch(() => {});
+          }
         }}
         className="rounded-md border border-zinc-300 px-2 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
       >
@@ -188,4 +216,43 @@ export function NewMessageWatcher({
   }
 
   return null;
+}
+
+// Subscribe the current browser to Web Push (or refresh the existing
+// subscription) and POST it to /api/push/subscribe so the server can
+// reach this device when the tab is closed.
+async function ensurePushSubscription() {
+  if (
+    typeof window === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window)
+  ) {
+    return;
+  }
+  const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!vapidPublic) return;
+
+  const reg = await navigator.serviceWorker.ready;
+  let subscription = await reg.pushManager.getSubscription();
+  if (!subscription) {
+    subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublic).buffer as ArrayBuffer,
+    });
+  }
+
+  await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscription: subscription.toJSON() }),
+  });
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
 }

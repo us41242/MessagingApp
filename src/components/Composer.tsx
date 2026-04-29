@@ -318,6 +318,15 @@ export function Composer({
       })),
     });
 
+    // Fire-and-forget push notify so recipients with the PWA closed get
+    // a system notification. We don't await — failures shouldn't block
+    // the send UI, and the server cleans up stale subscriptions itself.
+    fetch("/api/push/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId: realId }),
+    }).catch(() => {});
+
     // Upload each file, then insert attachment rows. Match each persisted
     // attachment back to its placeholder by file_name so the swap is in-place.
     for (const f of files) {

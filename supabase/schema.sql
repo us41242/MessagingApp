@@ -11,6 +11,7 @@
 -- ============================================================================
 
 -- --------- 1. CLEAR -------------------------------------------------------
+drop table if exists public.push_subscriptions cascade;
 drop table if exists public.message_reads cascade;
 drop table if exists public.attachments cascade;
 drop table if exists public.messages cascade;
@@ -134,6 +135,21 @@ create table public.attachments (
 create index attachments_message_idx on public.attachments(message_id);
 create index attachments_kind_idx on public.attachments(kind);
 
+-- push_subscriptions: each row is a single browser/device subscription so
+-- the /api/push/notify endpoint can dispatch Web Push to recipients while
+-- their browser is closed. Endpoint is the unique identifier.
+create table public.push_subscriptions (
+  id            uuid primary key default gen_random_uuid(),
+  profile_id    uuid not null references public.profiles(id) on delete cascade,
+  endpoint      text not null unique,
+  p256dh        text not null,
+  auth          text not null,
+  user_agent    text,
+  created_at    timestamptz not null default now(),
+  last_used_at  timestamptz
+);
+create index push_subscriptions_profile_idx on public.push_subscriptions(profile_id);
+
 -- message_reads: per-recipient read receipts
 create table public.message_reads (
   message_id    uuid not null references public.messages(id) on delete cascade,
@@ -248,6 +264,40 @@ as $$
 $$;
 grant execute on function public.is_conversation_member(uuid) to authenticated, anon;
 
+-- --------- 6c. RPC: push targets for a message ---------------------------
+-- Returns push_subscription rows for the recipients of a given message.
+-- Caller must be a member of the conversation (verified by is_conversation_member).
+-- security definer so it can read other users' push_subscriptions, which RLS
+-- otherwise blocks.
+create or replace function public.get_push_targets_for_message(msg_id uuid)
+returns table (subscription_id uuid, endpoint text, p256dh text, auth text)
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  conv_id uuid;
+  sender uuid;
+begin
+  select conversation_id, sender_id into conv_id, sender
+    from public.messages where id = msg_id;
+  if conv_id is null then
+    raise exception 'message not found';
+  end if;
+  if not public.is_conversation_member(conv_id) then
+    raise exception 'not a member';
+  end if;
+  return query
+    select ps.id, ps.endpoint, ps.p256dh, ps.auth
+    from public.conversation_members cm
+    join public.push_subscriptions ps on ps.profile_id = cm.profile_id
+    where cm.conversation_id = conv_id
+      and (sender is null or cm.profile_id <> sender);
+end;
+$$;
+grant execute on function public.get_push_targets_for_message(uuid) to authenticated;
+
 -- --------- 7. RLS ---------------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.conversations enable row level security;
@@ -255,6 +305,7 @@ alter table public.conversation_members enable row level security;
 alter table public.messages enable row level security;
 alter table public.attachments enable row level security;
 alter table public.message_reads enable row level security;
+alter table public.push_subscriptions enable row level security;
 
 -- profiles: any authenticated user can see profiles (it's a 1:1 messenger
 -- with open signup; everyone can find each other). Users can edit their own.
@@ -332,6 +383,17 @@ create policy "reads read" on public.message_reads
   );
 create policy "reads write self" on public.message_reads
   for insert to authenticated with check (profile_id = auth.uid());
+
+-- push_subscriptions: users only manage their own. The cross-user lookup
+-- needed for dispatch goes through the security-definer RPC above.
+create policy "ps read self" on public.push_subscriptions
+  for select to authenticated using (profile_id = auth.uid());
+create policy "ps insert self" on public.push_subscriptions
+  for insert to authenticated with check (profile_id = auth.uid());
+create policy "ps update self" on public.push_subscriptions
+  for update to authenticated using (profile_id = auth.uid());
+create policy "ps delete self" on public.push_subscriptions
+  for delete to authenticated using (profile_id = auth.uid());
 
 -- --------- 8. STORAGE -----------------------------------------------------
 -- Single 'media' bucket; files are namespaced by conversation_id/message_id.

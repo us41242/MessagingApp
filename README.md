@@ -9,9 +9,13 @@ Postgres + Realtime + Storage).
 - 1:1 conversations with realtime delivery
 - Inline media: images, video, audio, voice notes, files, animations,
   stickers
+- In-browser voice recording (mic button in the composer)
 - Edit messages (with history) and soft-delete your own
 - Share live location (browser geolocation → OpenStreetMap pin)
 - Per-conversation search and a media/files filter drawer
+- New-message alerts: sound ping, page-title flash, and Web Push
+  notifications (works while the browser is closed once installed as a PWA)
+- Installable as a PWA (Add to Home Screen on Android/iOS)
 - Telegram chat-history import (designed-in from day one — see below)
 
 ## Local setup
@@ -57,6 +61,37 @@ email a magic link. Open it on the same machine to land back in the app.
 - Middleware protects every route except `/login` and `/auth/*`.
 - `/auth/confirm?token_hash=...&type=email` exchanges the OTP for a
   session cookie and redirects to the app.
+
+## PWA + Web Push setup
+
+Push notifications work even when the browser is closed once you:
+
+1. **Install the app.** On Android Chrome: hit the menu → "Add to Home
+   screen" / "Install app". On iOS Safari: Share → "Add to Home Screen".
+   On desktop Chrome: address-bar install icon. The app then runs in its
+   own window and the OS treats it like a native app.
+2. **Grant notification permission.** Sign in, then in the app's footer
+   click "Enable notifications" once. The service worker subscribes to
+   push and stores the subscription in the `push_subscriptions` table
+   (one row per device).
+3. After that, every message someone sends triggers a Web Push delivered
+   to your device's notification shade. Tapping the notification opens
+   the conversation directly.
+
+Required environment variables (already set in Vercel for the live deploy
+— set them locally if you develop offline):
+
+| Var | Where | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Client + server | Browser uses it to subscribe |
+| `VAPID_PRIVATE_KEY` | Server only | Signs push payloads |
+| `VAPID_SUBJECT` | Server only | `mailto:you@example.com` |
+
+Generate a fresh keypair with:
+
+```bash
+node -e "console.log(JSON.stringify(require('web-push').generateVAPIDKeys()))"
+```
 
 ## Importing Telegram history
 
