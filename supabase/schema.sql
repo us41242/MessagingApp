@@ -226,6 +226,28 @@ begin
 end;
 $$;
 
+-- --------- 6b. RLS HELPER -------------------------------------------------
+-- Used by every policy that asks "is the calling user a member of this
+-- conversation?". Running it as security definer bypasses RLS on the
+-- conversation_members table, which is what we need: otherwise a policy
+-- on conversation_members that calls itself recurses (or, depending on
+-- pg version, simply fails to return rows under nested PostgREST
+-- embeds), and the whole conversation read path 404s after the first
+-- DM is created.
+create or replace function public.is_conversation_member(c_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.conversation_members
+    where conversation_id = c_id and profile_id = auth.uid()
+  );
+$$;
+grant execute on function public.is_conversation_member(uuid) to authenticated, anon;
+
 -- --------- 7. RLS ---------------------------------------------------------
 alter table public.profiles enable row level security;
 alter table public.conversations enable row level security;
@@ -241,32 +263,20 @@ create policy "profiles read" on public.profiles
 create policy "profiles update self" on public.profiles
   for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 
--- conversations: members only
+-- conversations: members only (membership check via security-definer helper)
 create policy "conversations read" on public.conversations
-  for select to authenticated using (
-    exists (
-      select 1 from public.conversation_members m
-      where m.conversation_id = conversations.id and m.profile_id = auth.uid()
-    )
-  );
+  for select to authenticated using (public.is_conversation_member(id));
 create policy "conversations insert any auth" on public.conversations
   for insert to authenticated with check (true);
 create policy "conversations update member" on public.conversations
-  for update to authenticated using (
-    exists (
-      select 1 from public.conversation_members m
-      where m.conversation_id = conversations.id and m.profile_id = auth.uid()
-    )
-  );
+  for update to authenticated using (public.is_conversation_member(id));
 
--- members: a user sees membership rows for conversations they're in
+-- members: a user sees their own membership row directly (cheap path),
+-- or any membership row for a conversation they're already a member of.
 create policy "members read" on public.conversation_members
   for select to authenticated using (
     profile_id = auth.uid()
-    or exists (
-      select 1 from public.conversation_members m
-      where m.conversation_id = conversation_members.conversation_id and m.profile_id = auth.uid()
-    )
+    or public.is_conversation_member(conversation_id)
   );
 create policy "members insert self" on public.conversation_members
   for insert to authenticated with check (profile_id = auth.uid());
@@ -276,18 +286,12 @@ create policy "members update self" on public.conversation_members
 -- messages: read if member of the conversation, write as self
 create policy "messages read" on public.messages
   for select to authenticated using (
-    exists (
-      select 1 from public.conversation_members m
-      where m.conversation_id = messages.conversation_id and m.profile_id = auth.uid()
-    )
+    public.is_conversation_member(conversation_id)
   );
 create policy "messages insert self" on public.messages
   for insert to authenticated with check (
     sender_id = auth.uid()
-    and exists (
-      select 1 from public.conversation_members m
-      where m.conversation_id = messages.conversation_id and m.profile_id = auth.uid()
-    )
+    and public.is_conversation_member(conversation_id)
   );
 create policy "messages update own" on public.messages
   for update to authenticated using (sender_id = auth.uid()) with check (sender_id = auth.uid());
@@ -299,8 +303,8 @@ create policy "attachments read" on public.attachments
   for select to authenticated using (
     exists (
       select 1 from public.messages msg
-      join public.conversation_members m on m.conversation_id = msg.conversation_id
-      where msg.id = attachments.message_id and m.profile_id = auth.uid()
+      where msg.id = attachments.message_id
+        and public.is_conversation_member(msg.conversation_id)
     )
   );
 create policy "attachments insert via own message" on public.attachments
