@@ -20,10 +20,19 @@ export function Composer({
   conversationId,
   meId,
   onOptimisticInsert,
+  onReplaceMessage,
+  onRemoveOptimistic,
+  onUpdateMessage,
 }: {
   conversationId: string;
   meId: string;
   onOptimisticInsert: (m: MessageWithAttachments) => void;
+  onReplaceMessage: (oldId: string, real: MessageWithAttachments) => void;
+  onRemoveOptimistic: (optimisticId: string) => void;
+  onUpdateMessage: (
+    id: string,
+    updater: (m: MessageWithAttachments) => MessageWithAttachments
+  ) => void;
 }) {
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
@@ -177,13 +186,14 @@ export function Composer({
       .single();
 
     if (insertErr || !inserted) {
+      onRemoveOptimistic(optimisticId);
       alert(insertErr?.message || "Failed to send");
       return;
     }
 
-    // Replace optimistic id with real one.
     const realId = inserted.id;
-    onOptimisticInsert({
+    // Swap optimistic → confirmed in place (matches by optimistic id).
+    onReplaceMessage(optimisticId, {
       ...(inserted as unknown as MessageWithAttachments),
       attachments: optimisticAttachments.map((a) => ({
         ...a,
@@ -191,7 +201,8 @@ export function Composer({
       })),
     });
 
-    // Upload each file, then insert attachment rows.
+    // Upload each file, then insert attachment rows. Match each persisted
+    // attachment back to its placeholder by file_name so the swap is in-place.
     for (const f of files) {
       const ext = f.file.name.includes(".")
         ? f.file.name.slice(f.file.name.lastIndexOf("."))
@@ -226,15 +237,14 @@ export function Composer({
         .select("*")
         .single();
       if (attRow) {
-        // Realtime will also fire, but locally upsert immediately too.
-        onOptimisticInsert({
-          ...(inserted as unknown as MessageWithAttachments),
-          attachments: [
-            ...(optimisticAttachments
-              .map((a) => ({ ...a, message_id: realId }))
-              .filter((a) => a.file_name !== f.file.name)),
-            attRow as Attachment,
-          ],
+        onUpdateMessage(realId, (m) => {
+          // Drop the optimistic placeholder for this file (matched by name +
+          // the _optimistic flag in metadata) and append the real row.
+          const filtered = m.attachments.filter((a) => {
+            const meta = a.metadata as { _optimistic?: boolean } | null;
+            return !(meta?._optimistic && a.file_name === f.file.name);
+          });
+          return { ...m, attachments: [...filtered, attRow as Attachment] };
         });
       }
     }

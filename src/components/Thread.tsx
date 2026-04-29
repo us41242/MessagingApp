@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Attachment,
@@ -36,26 +36,62 @@ export function Thread({
     "closed"
   );
 
-  // Map of message_id -> message index, useful for fast realtime patches.
-  const messagesById = useMemo(() => {
-    const m = new Map<string, number>();
-    messages.forEach((msg, i) => m.set(msg.id, i));
-    return m;
+  // Stable id-set ref read from inside the realtime handler. Using state
+  // here would force the channel to resubscribe on every new message,
+  // so we mirror the latest ids into a ref instead.
+  const messageIdsRef = useRef<Set<string>>(new Set(initialMessages.map((m) => m.id)));
+  useEffect(() => {
+    messageIdsRef.current = new Set(messages.map((m) => m.id));
   }, [messages]);
 
-  const upsertMessage = useCallback(
-    (m: MessageWithAttachments) => {
+  const upsertMessage = useCallback((m: MessageWithAttachments) => {
+    setMessages((prev) => {
+      const idx = prev.findIndex((x) => x.id === m.id);
+      if (idx === -1) {
+        return [...prev, m].sort((a, b) => (a.sent_at < b.sent_at ? -1 : 1));
+      }
+      const next = prev.slice();
+      next[idx] = { ...prev[idx], ...m };
+      return next;
+    });
+  }, []);
+
+  // Replace an optimistic message (matched by its temporary id) with the
+  // confirmed row from the DB. Falls back to upsert if the optimistic
+  // entry isn't there (e.g. realtime delivered the real one first).
+  const replaceMessage = useCallback(
+    (oldId: string, real: MessageWithAttachments) => {
       setMessages((prev) => {
-        const idx = prev.findIndex((x) => x.id === m.id);
+        const idx = prev.findIndex((m) => m.id === oldId);
         if (idx === -1) {
-          return [...prev, m].sort((a, b) =>
+          if (prev.some((m) => m.id === real.id)) return prev;
+          return [...prev, real].sort((a, b) =>
             a.sent_at < b.sent_at ? -1 : 1
           );
         }
         const next = prev.slice();
-        next[idx] = { ...prev[idx], ...m };
+        next[idx] = real;
         return next;
       });
+    },
+    []
+  );
+
+  // Drop an optimistic message that failed to land.
+  const removeOptimistic = useCallback((optimisticId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+  }, []);
+
+  // Functional patch on a confirmed message — used during attachment uploads
+  // to swap the placeholder attachment for the persisted row.
+  const updateMessage = useCallback(
+    (
+      id: string,
+      updater: (m: MessageWithAttachments) => MessageWithAttachments
+    ) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? updater(m) : m))
+      );
     },
     []
   );
@@ -80,7 +116,9 @@ export function Thread({
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  // Realtime: messages + attachments scoped to this conversation
+  // Realtime: messages + attachments scoped to this conversation. Subscribes
+  // once on mount; reads stable refs/callbacks so it never re-subscribes
+  // mid-thread.
   useEffect(() => {
     const channel = supabase
       .channel(`conv-${conversationId}`)
@@ -94,8 +132,10 @@ export function Thread({
         },
         async (payload) => {
           const row = payload.new as MessageWithAttachments;
-          // Skip our own optimistic inserts (already in state by id).
-          if (messagesById.has(row.id)) return;
+          // Our own sends are added optimistically and confirmed via the
+          // insert response — ignore the realtime echo.
+          if (row.sender_id === meId) return;
+          if (messageIdsRef.current.has(row.id)) return;
           // Re-fetch with attachments + sender to keep shape consistent.
           const { data } = await supabase
             .from("messages")
@@ -160,7 +200,7 @@ export function Thread({
   }, [
     supabase,
     conversationId,
-    messagesById,
+    meId,
     upsertMessage,
     upsertAttachment,
     removeMessage,
@@ -238,6 +278,9 @@ export function Thread({
           conversationId={conversationId}
           meId={meId}
           onOptimisticInsert={upsertMessage}
+          onReplaceMessage={replaceMessage}
+          onRemoveOptimistic={removeOptimistic}
+          onUpdateMessage={updateMessage}
         />
       </div>
 
