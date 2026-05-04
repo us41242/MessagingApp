@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor / Android build outputs (committed source stays; build artifacts don't)
+/android/.gradle/
+/android/.idea/
+/android/local.properties
+/android/build/
+/android/app/build/
+/android/app/release/
+/android/captures/
+/android/.cxx/
+/android/app/release/output-metadata.json
+/android/app/google-services.json
