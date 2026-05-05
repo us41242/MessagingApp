@@ -21,6 +21,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Need write permission so the workflow can publish a Release with the
+    # APK attached. Default GITHUB_TOKEN permissions are read-only otherwise.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -67,3 +71,24 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Stage release asset
+        # Always-named "messaging-app.apk" so the public install URL
+        # (releases/latest/download/messaging-app.apk) is stable.
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk messaging-app.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          make_latest: true
+          files: messaging-app.apk
+          body: |
+            APK build of MessagingApp from commit ${{ github.sha }}.
+
+            **Direct install:** [messaging-app.apk](https://github.com/${{ github.repository }}/releases/latest/download/messaging-app.apk)
+
+            On Android, tap that link in Chrome on your phone, then
+            tap the downloaded file. You'll be asked once to allow
+            installs from this source — flip the toggle and confirm.

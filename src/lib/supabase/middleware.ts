@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = [
   "/login",
+  "/install",
   "/auth/callback",
   "/auth/confirm",
   "/sw.js",
