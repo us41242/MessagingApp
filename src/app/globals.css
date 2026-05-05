@@ -19,6 +19,13 @@
   }
 }
 
+/* Bump root font-size ~10% so every Tailwind rem-based size grows
+   proportionally — text, button heights, paddings, gaps all increase
+   together. Tweak between 16px (default) and 18px (~12.5% bigger) to taste. */
+html {
+  font-size: 17.5px;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
