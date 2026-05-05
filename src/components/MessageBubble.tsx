@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { MessageWithAttachments } from "@/lib/supabase/types";
 import { AttachmentView } from "@/components/AttachmentView";
 import { LocationCard } from "@/components/LocationCard";
+import { saveAttachments, shareMessage } from "@/lib/share";
 
 export function MessageBubble({
   message,
@@ -135,22 +136,45 @@ export function MessageBubble({
               tg
             </span>
           ) : null}
-          {isMine && !isEditing ? (
-            <span className="hidden gap-1 group-hover:flex">
-              <button
-                type="button"
-                onClick={onStartEdit}
-                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-              >
-                edit
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                className="text-zinc-500 hover:text-red-600"
-              >
-                delete
-              </button>
+          {!isEditing ? (
+            <span className="flex gap-2">
+              {(message.body && message.body.trim().length > 0) ||
+              message.attachments.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => shareMessage(message)}
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                >
+                  share
+                </button>
+              ) : null}
+              {message.attachments.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => saveAttachments(message.attachments)}
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                >
+                  save
+                </button>
+              ) : null}
+              {isMine ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onStartEdit}
+                    className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  >
+                    edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    className="text-zinc-500 hover:text-red-600"
+                  >
+                    delete
+                  </button>
+                </>
+              ) : null}
             </span>
           ) : null}
         </div>
