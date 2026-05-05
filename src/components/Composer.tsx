@@ -57,6 +57,7 @@ export function Composer({
   onReplaceMessage,
   onRemoveOptimistic,
   onUpdateMessage,
+  onOpenSearch,
 }: {
   conversationId: string;
   meId: string;
@@ -67,6 +68,7 @@ export function Composer({
     id: string,
     updater: (m: MessageWithAttachments) => MessageWithAttachments
   ) => void;
+  onOpenSearch?: () => void;
 }) {
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
@@ -74,8 +76,31 @@ export function Composer({
   const [text, setText] = useState("");
   const [pending, setPending] = useState<PendingFile[]>([]);
   const [busy, setBusy] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Trigger one of the Brivo gates via the messaging-app proxy at
+  // /api/gates/unlock. Same-origin so no CORS dance, server-side fetch
+  // forwards to gates.alwayshave.fun where the Brivo creds live.
+  async function unlockGate(which: "jones" | "reno") {
+    setActionsOpen(false);
+    try {
+      const r = await fetch("/api/gates/unlock", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ gate: which }),
+      });
+      if (!r.ok) {
+        console.error("gate unlock failed", which, r.status, await r.text());
+        alert(`Couldn't open ${which === "jones" ? "Jones" : "Reno"} gate (${r.status}).`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`Network error opening ${which === "jones" ? "Jones" : "Reno"} gate.`);
+    }
+  }
 
   // Voice-record state
   const [recording, setRecording] = useState(false);
@@ -377,7 +402,7 @@ export function Composer({
   }
 
   return (
-    <footer className="border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 md:px-4 md:py-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <footer className="relative border-t border-zinc-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 md:px-4 md:py-3 dark:border-zinc-800 dark:bg-zinc-950">
       {pending.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {pending.map((p, i) => (
@@ -444,6 +469,17 @@ export function Composer({
             e.target.value = "";
           }}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*,video/*"
+          capture="user"
+          className="hidden"
+          onChange={(e) => {
+            addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
 
         {recording ? (
           <div className="flex w-full items-center gap-3 rounded-2xl border border-red-300 bg-red-50 px-3 py-2 text-sm dark:border-red-900 dark:bg-red-950/30">
@@ -473,29 +509,16 @@ export function Composer({
           <>
             <button
               type="button"
-              title="Attach"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              <PaperclipIcon />
-            </button>
-            <button
-              type="button"
-              title="Share location"
-              onClick={shareLocation}
+              aria-label={actionsOpen ? "Close actions" : "More actions"}
+              onClick={() => setActionsOpen((v) => !v)}
               disabled={busy}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform disabled:opacity-50 ${
+                actionsOpen
+                  ? "rotate-45 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              }`}
             >
-              <PinIcon />
-            </button>
-            <button
-              type="button"
-              title="Record voice"
-              onClick={startRecording}
-              disabled={busy}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              <MicIcon />
+              <PlusIcon />
             </button>
             <textarea
               ref={textareaRef}
@@ -504,25 +527,108 @@ export function Composer({
               value={text}
               disabled={busy}
               onChange={(e) => setText(e.target.value)}
+              onFocus={() => setActionsOpen(false)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSend();
                 }
               }}
-              className="max-h-40 flex-1 resize-none rounded-2xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+              className="max-h-40 flex-1 resize-none rounded-2xl border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-500 md:py-2 md:text-sm dark:border-zinc-700 dark:bg-zinc-900"
             />
             <button
               type="submit"
               disabled={busy || (!text.trim() && pending.length === 0)}
-              className="flex h-10 shrink-0 items-center justify-center rounded-full bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+              className="flex h-12 shrink-0 items-center justify-center rounded-full bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
             >
               Send
             </button>
           </>
         )}
       </form>
+
+      {actionsOpen && !recording ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close actions"
+            onClick={() => setActionsOpen(false)}
+            className="fixed inset-0 z-10 cursor-default bg-black/20"
+          />
+          <div className="absolute bottom-full left-2 right-2 z-20 mb-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xl md:left-4 md:right-auto md:w-96 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="grid grid-cols-3 gap-2">
+              <ActionTile
+                icon={<CarIcon className="h-8 w-8" />}
+                label="Open Jones"
+                onClick={() => unlockGate("jones")}
+              />
+              <ActionTile
+                icon={<CarIcon className="h-8 w-8" />}
+                label="Open Reno"
+                onClick={() => unlockGate("reno")}
+              />
+              <ActionTile
+                icon={<SearchIcon className="h-8 w-8" />}
+                label="Search"
+                onClick={() => {
+                  setActionsOpen(false);
+                  onOpenSearch?.();
+                }}
+              />
+              <ActionTile
+                icon={<MicIcon className="h-8 w-8" />}
+                label="Voice"
+                onClick={() => {
+                  setActionsOpen(false);
+                  startRecording();
+                }}
+              />
+              <ActionTile
+                icon={<CameraIcon className="h-8 w-8" />}
+                label="Take Photo"
+                onClick={() => {
+                  setActionsOpen(false);
+                  cameraInputRef.current?.click();
+                }}
+              />
+              <ActionTile
+                icon={<PaperclipIcon className="h-8 w-8" />}
+                label="Attach"
+                onClick={() => {
+                  setActionsOpen(false);
+                  fileInputRef.current?.click();
+                }}
+              />
+            </div>
+          </div>
+        </>
+      ) : null}
     </footer>
+  );
+}
+
+function ActionTile({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 rounded-2xl bg-zinc-50 py-4 transition-colors hover:bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:active:bg-zinc-700"
+    >
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm dark:bg-zinc-800 dark:text-zinc-200">
+        {icon}
+      </span>
+      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        {label}
+      </span>
+    </button>
   );
 }
 
@@ -567,37 +673,25 @@ async function readDimensions(p: PendingFile): Promise<{
   return null;
 }
 
-function PaperclipIcon() {
+function PaperclipIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
     </svg>
   );
 }
-function PinIcon() {
+function PinIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 22s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z" />
       <circle cx="12" cy="10" r="2.5" />
     </svg>
   );
 }
-function MicIcon() {
+function MicIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg
-      className="h-5 w-5"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -609,6 +703,70 @@ function MicIcon() {
       <path d="M5 11a7 7 0 0 0 14 0" />
       <path d="M12 18v3" />
       <path d="M9 21h6" />
+    </svg>
+  );
+}
+function PlusIcon() {
+  return (
+    <svg
+      className="h-6 w-6"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function CarIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 17H3v-5l2-5h14l2 5v5h-2" />
+      <path d="M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z" />
+      <path d="M15 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+function SearchIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+function CameraIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14.5 4h-5l-2 3H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5l-2-3z" />
+      <circle cx="12" cy="13" r="3.5" />
     </svg>
   );
 }

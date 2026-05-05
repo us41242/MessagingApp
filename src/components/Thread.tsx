@@ -209,7 +209,7 @@ export function Thread({
   return (
     <div className="relative flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2.5 md:px-4 md:py-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <header className="flex items-center gap-2 border-b border-zinc-200 bg-white px-3 pb-2.5 pt-[max(env(safe-area-inset-top),0.625rem)] md:px-4 md:pb-3 md:pt-3 dark:border-zinc-800 dark:bg-zinc-950">
           <Link
             href="/"
             aria-label="Back to messages"
@@ -281,6 +281,7 @@ export function Thread({
           onReplaceMessage={replaceMessage}
           onRemoveOptimistic={removeOptimistic}
           onUpdateMessage={updateMessage}
+          onOpenSearch={() => setDrawerTab(drawerTab === "search" ? "closed" : "search")}
         />
       </div>
 
