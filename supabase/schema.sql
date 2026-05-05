@@ -421,6 +421,26 @@ create policy "fcm insert self" on public.fcm_tokens for insert to authenticated
 create policy "fcm update self" on public.fcm_tokens for update to authenticated using (profile_id = auth.uid());
 create policy "fcm delete self" on public.fcm_tokens for delete to authenticated using (profile_id = auth.uid());
 
+-- Sister RPC to get_push_targets_for_message: returns FCM tokens for the
+-- recipients of a given message. security definer so the notify route can
+-- read other users' fcm_tokens rows (RLS otherwise forbids).
+create or replace function public.get_fcm_targets_for_message(msg_id uuid)
+returns table (token_id uuid, token text, platform text)
+language sql
+security definer
+set search_path = public
+as $$
+  select ft.id, ft.token, ft.platform
+  from public.messages m
+    join public.conversation_members cm on cm.conversation_id = m.conversation_id
+    join public.fcm_tokens ft on ft.profile_id = cm.profile_id
+  where m.id = msg_id
+    and (m.sender_id is null or cm.profile_id != m.sender_id);
+$$;
+
+revoke all on function public.get_fcm_targets_for_message(uuid) from public;
+grant execute on function public.get_fcm_targets_for_message(uuid) to authenticated;
+
 -- --------- 8. STORAGE -----------------------------------------------------
 -- Single 'media' bucket; files are namespaced by conversation_id/message_id.
 insert into storage.buckets (id, name, public)

@@ -13,7 +13,7 @@ export function MobileHomeList({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] dark:border-zinc-800 dark:bg-zinc-950">
         <h1 className="text-base font-semibold tracking-tight">Messages</h1>
         <Link
           href="/new"

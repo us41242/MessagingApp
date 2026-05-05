@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
+import { getFcmMessaging } from "@/lib/fcm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,12 @@ interface PushTarget {
   endpoint: string;
   p256dh: string;
   auth: string;
+}
+
+interface FcmTarget {
+  token_id: string;
+  token: string;
+  platform: string;
 }
 
 interface SenderProfile {
@@ -83,14 +90,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "message not found" }, { status: 404 });
   }
 
-  const { data: targetsData, error: targetsErr } = await supabase.rpc(
-    "get_push_targets_for_message",
-    { msg_id: body.messageId }
-  );
-  if (targetsErr) {
-    return NextResponse.json({ error: targetsErr.message }, { status: 500 });
+  const [webResult, fcmResult] = await Promise.all([
+    supabase.rpc("get_push_targets_for_message", { msg_id: body.messageId }),
+    supabase.rpc("get_fcm_targets_for_message", { msg_id: body.messageId }),
+  ]);
+  if (webResult.error) {
+    return NextResponse.json({ error: webResult.error.message }, { status: 500 });
   }
-  const targets = (targetsData ?? []) as PushTarget[];
+  const targets = (webResult.data ?? []) as PushTarget[];
+  // FCM RPC may not exist yet on older databases — treat as empty so the
+  // route keeps working until the migration is applied.
+  const fcmTargets = (fcmResult.data ?? []) as FcmTarget[];
+  if (fcmResult.error && fcmResult.error.code !== "PGRST202") {
+    console.warn("get_fcm_targets_for_message failed:", fcmResult.error);
+  }
 
   const senderProfile = Array.isArray(msg.sender)
     ? msg.sender[0]
@@ -122,7 +135,7 @@ export async function POST(request: NextRequest) {
   );
 
   let sent = 0;
-  let stale: string[] = [];
+  const stale: string[] = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
       sent += 1;
@@ -141,9 +154,56 @@ export async function POST(request: NextRequest) {
     await supabase.from("push_subscriptions").delete().in("endpoint", stale);
   }
 
+  // FCM fan-out (Capacitor Android wrapper). Skipped silently if firebase
+  // creds aren't configured — web-push above keeps working in that case.
+  let fcmSent = 0;
+  const fcmStale: string[] = [];
+  const fcmShortBody =
+    preview.length > 240 ? `${preview.slice(0, 237)}…` : preview;
+  const messaging = fcmTargets.length > 0 ? getFcmMessaging() : null;
+  if (messaging && fcmTargets.length > 0) {
+    const fcmRes = await messaging.sendEachForMulticast({
+      tokens: fcmTargets.map((t) => t.token),
+      notification: { title, body: fcmShortBody },
+      data: {
+        url: `/c/${msg.conversation_id}`,
+        conversationId: msg.conversation_id,
+        messageId: msg.id,
+      },
+      android: {
+        priority: "high",
+        notification: { channelId: "default", tag: msg.conversation_id },
+      },
+    });
+    fcmRes.responses.forEach((r, i) => {
+      if (r.success) {
+        fcmSent += 1;
+      } else {
+        const code = r.error?.code;
+        // Token revoked / unregistered — clean it up so we don't keep trying.
+        if (
+          code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token" ||
+          code === "messaging/invalid-argument"
+        ) {
+          fcmStale.push(fcmTargets[i].token);
+        } else {
+          console.warn("fcm send failed:", code, r.error?.message);
+        }
+      }
+    });
+    if (fcmStale.length > 0) {
+      await supabase.from("fcm_tokens").delete().in("token", fcmStale);
+    }
+  }
+
   return NextResponse.json({
     sent,
     total: targets.length,
     stale: stale.length,
+    fcmSent,
+    fcmTotal: fcmTargets.length,
+    fcmStale: fcmStale.length,
+    fcmConfigured: messaging !== null,
   });
 }

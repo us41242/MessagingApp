@@ -20,7 +20,7 @@ export default async function NewConversationPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <header className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 md:hidden dark:border-zinc-800 dark:bg-zinc-950">
+      <header className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] md:hidden dark:border-zinc-800 dark:bg-zinc-950">
         <Link
           href="/"
           aria-label="Back"
