@@ -56,6 +56,19 @@ function attachmentSummary(att: AttachmentRow[] | null | undefined): string | nu
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    return await handleNotify(request);
+  } catch (e) {
+    const err = e as Error;
+    console.error("notify route threw:", err);
+    return NextResponse.json(
+      { error: "internal", message: err?.message, stack: err?.stack?.split("\n").slice(0, 6) },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleNotify(request: NextRequest) {
   if (!vapidPublic || !vapidPrivate) {
     return NextResponse.json(
       { error: "VAPID keys not configured" },
