@@ -46,21 +46,6 @@ jobs:
       - name: Sync Capacitor → Android
         run: npx cap sync android
 
-      - name: Restore persistent debug keystore
-        # Android Gradle Plugin uses ~/.android/debug.keystore (alias
-        # "androiddebugkey", passwords "android") as the default debug
-        # signing key. Plopping our committed-once-then-stored-as-secret
-        # keystore at that path makes every CI build sign with the same
-        # cert — so installing newer APKs over an older one no longer
-        # trips Android's signature-mismatch refusal.
-        run: |
-          mkdir -p ~/.android
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
-          if [ ! -s ~/.android/debug.keystore ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 secret missing or empty"
-            exit 1
-          fi
-
       - name: Cache Gradle
         uses: actions/cache@v4
         with:

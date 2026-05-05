@@ -16,7 +16,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // Debug keystore is checked into the repo. It's a *debug* cert with
+        // the well-known default password ("android"); committing it is
+        // standard practice and the only way to guarantee every CI build
+        // signs with the same SHA-1 (so updates install over each other and
+        // the SHA registered with Google's OAuth client keeps working).
+        // For real-store releases we'd add a separate release signingConfig
+        // backed by an environment variable.
+        debug {
+            storeFile file('messaging-debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
