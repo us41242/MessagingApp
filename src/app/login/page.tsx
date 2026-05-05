@@ -1,8 +1,19 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+const GOOGLE_WEB_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+// Capacitor detection — guarded because window.Capacitor only exists inside
+// the native wrapper. On regular web this returns false and we use the
+// browser OAuth redirect flow instead.
+function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return cap?.isNativePlatform?.() === true;
+}
 
 export default function LoginPage() {
   return (
@@ -25,6 +36,30 @@ function LoginInner() {
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const socialInit = useRef(false);
+
+  // One-time init of the native Google sign-in plugin inside the Capacitor
+  // wrapper. No-op on the browser. The webClientId is the SAME OAuth client
+  // ID Supabase is configured with — the id_token issued to the Android app
+  // must have that audience for Supabase to accept it.
+  useEffect(() => {
+    if (!isNativeApp() || socialInit.current) return;
+    if (!GOOGLE_WEB_CLIENT_ID) {
+      console.warn("[login] NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID not set — native Google sign-in disabled");
+      return;
+    }
+    socialInit.current = true;
+    (async () => {
+      try {
+        const { SocialLogin } = await import("@capgo/capacitor-social-login");
+        await SocialLogin.initialize({
+          google: { webClientId: GOOGLE_WEB_CLIENT_ID, mode: "online" },
+        });
+      } catch (e) {
+        console.error("[login] SocialLogin.initialize failed:", e);
+      }
+    })();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,6 +129,42 @@ function LoginInner() {
     setBusy(true);
     setErrorMsg(null);
     const supabase = createClient();
+
+    // Native Capacitor: use the system Google Sign-In flow (Play Services)
+    // since Google blocks OAuth in WebViews. Returns an id_token that we
+    // hand to Supabase via signInWithIdToken — same end state as the
+    // browser redirect flow but no leaving-the-app moment.
+    if (isNativeApp()) {
+      try {
+        const { SocialLogin } = await import("@capgo/capacitor-social-login");
+        const res = await SocialLogin.login({
+          provider: "google",
+          options: { scopes: ["email", "profile"] },
+        });
+        const idToken =
+          (res.result as { idToken?: string } | undefined)?.idToken;
+        if (!idToken) {
+          throw new Error("No id_token returned from Google sign-in");
+        }
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: idToken,
+        });
+        setBusy(false);
+        if (error) {
+          setErrorMsg(error.message);
+          return;
+        }
+        router.push(next);
+        router.refresh();
+      } catch (e) {
+        setBusy(false);
+        setErrorMsg(e instanceof Error ? e.message : "Google sign-in failed");
+      }
+      return;
+    }
+
+    // Web: standard OAuth redirect.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
