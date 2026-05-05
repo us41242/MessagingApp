@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -16,12 +15,14 @@ type SupabaseClient = ReturnType<typeof createClient>;
 
 export function Thread({
   conversationId,
-  headerTitle,
   meId,
   initialMessages,
 }: {
   conversationId: string;
-  headerTitle: string;
+  // Kept for API compatibility with the page that renders this component;
+  // the visible top bar was removed since the conversation set is small
+  // enough that "which thread am I in" is obvious.
+  headerTitle?: string;
   meId: string;
   initialMessages: MessageWithAttachments[];
 }) {
@@ -208,50 +209,7 @@ export function Thread({
 
   return (
     <div className="relative flex flex-1 overflow-hidden">
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-zinc-200 bg-white px-3 pb-2.5 pt-[max(env(safe-area-inset-top),0.625rem)] md:px-4 md:pb-3 md:pt-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <Link
-            href="/"
-            aria-label="Back to messages"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100 md:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                d="m15 18-6-6 6-6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
-          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight md:text-base">
-            {headerTitle}
-          </h2>
-          <div className="flex shrink-0 items-center gap-1">
-            <DrawerTabButton
-              active={drawerTab === "search"}
-              onClick={() =>
-                setDrawerTab(drawerTab === "search" ? "closed" : "search")
-              }
-              label="Search"
-              icon={<SearchIcon />}
-            />
-            <DrawerTabButton
-              active={drawerTab === "media"}
-              onClick={() =>
-                setDrawerTab(drawerTab === "media" ? "closed" : "media")
-              }
-              label="Media"
-              icon={<ImageIcon />}
-            />
-          </div>
-        </header>
-
+      <div className="flex flex-1 flex-col pt-[env(safe-area-inset-top)]">
         <MessageList
           conversationId={conversationId}
           messages={messages}
@@ -316,61 +274,6 @@ export function Thread({
         </>
       ) : null}
     </div>
-  );
-}
-
-function DrawerTabButton({
-  active,
-  onClick,
-  label,
-  icon,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      onClick={onClick}
-      className={`flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 ${
-        active ? "bg-zinc-100 dark:bg-zinc-800" : ""
-      }`}
-    >
-      {icon}
-    </button>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function ImageIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
 
