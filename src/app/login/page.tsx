@@ -137,10 +137,11 @@ function LoginInner() {
     if (isNativeApp()) {
       try {
         const { SocialLogin } = await import("@capgo/capacitor-social-login");
-        const res = await SocialLogin.login({
-          provider: "google",
-          options: { scopes: ["email", "profile"] },
-        });
+        // Don't pass `scopes` here — the @capgo plugin's Android Credentials
+        // path rejects custom scopes unless MainActivity implements a marker
+        // interface, but it always includes email/profile/openid by default,
+        // which is exactly what Supabase needs to verify the id_token.
+        const res = await SocialLogin.login({ provider: "google", options: {} });
         const idToken =
           (res.result as { idToken?: string } | undefined)?.idToken;
         if (!idToken) {
