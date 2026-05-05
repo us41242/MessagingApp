@@ -395,6 +395,32 @@ create policy "ps update self" on public.push_subscriptions
 create policy "ps delete self" on public.push_subscriptions
   for delete to authenticated using (profile_id = auth.uid());
 
+-- fcm_tokens: native (Capacitor / FCM) push tokens. Separate from
+-- push_subscriptions because that table holds VAPID web-push records
+-- with a totally different shape (endpoint/p256dh/auth). One profile
+-- can have multiple tokens (Android phone + tablet, etc.). Tokens are
+-- unique across the whole table because Firebase issues globally.
+create table if not exists public.fcm_tokens (
+  id           uuid primary key default gen_random_uuid(),
+  profile_id   uuid not null references public.profiles(id) on delete cascade,
+  token        text not null unique,
+  platform     text not null default 'android',
+  user_agent   text,
+  created_at   timestamptz not null default now(),
+  last_used_at timestamptz
+);
+create index if not exists fcm_tokens_profile_idx on public.fcm_tokens(profile_id);
+
+alter table public.fcm_tokens enable row level security;
+drop policy if exists "fcm read self"   on public.fcm_tokens;
+drop policy if exists "fcm insert self" on public.fcm_tokens;
+drop policy if exists "fcm update self" on public.fcm_tokens;
+drop policy if exists "fcm delete self" on public.fcm_tokens;
+create policy "fcm read self"   on public.fcm_tokens for select to authenticated using (profile_id = auth.uid());
+create policy "fcm insert self" on public.fcm_tokens for insert to authenticated with check (profile_id = auth.uid());
+create policy "fcm update self" on public.fcm_tokens for update to authenticated using (profile_id = auth.uid());
+create policy "fcm delete self" on public.fcm_tokens for delete to authenticated using (profile_id = auth.uid());
+
 -- --------- 8. STORAGE -----------------------------------------------------
 -- Single 'media' bucket; files are namespaced by conversation_id/message_id.
 insert into storage.buckets (id, name, public)

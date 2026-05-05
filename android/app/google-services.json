@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "492043279935",
+    "project_id": "messaging-8aa8d",
+    "storage_bucket": "messaging-8aa8d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:492043279935:android:008d68cd2f765f0743228a",
+        "android_client_info": {
+          "package_name": "fun.alwayshave.messaging"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAS0ifJpGI3joEtlysDXMAXicDQApqE6sM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

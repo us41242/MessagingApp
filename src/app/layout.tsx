@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { PushRegistration } from "@/components/PushRegistration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,7 +45,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="flex h-dvh flex-col overflow-hidden">{children}</body>
+      <body className="flex h-dvh flex-col overflow-hidden">
+        <PushRegistration />
+        {children}
+      </body>
     </html>
   );
 }

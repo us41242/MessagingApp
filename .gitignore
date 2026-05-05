@@ -50,4 +50,6 @@ next-env.d.ts
 /android/captures/
 /android/.cxx/
 /android/app/release/output-metadata.json
-/android/app/google-services.json
+# google-services.json is committed — needed by the CI APK build. The
+# values inside are public client identifiers (project ID, API key
+# scoped to this app's package name), not server secrets.

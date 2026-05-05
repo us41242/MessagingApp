@@ -38,4 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ requires runtime permission to post notifications. Without
+         this declaration the OS won't prompt the user, which is why the
+         settings panel shows "this app does not send notifications". -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>
