@@ -5,13 +5,14 @@ import type { Attachment } from "@/lib/supabase/types";
 import { createClient } from "@/lib/supabase/client";
 import { humanFileSize } from "@/lib/format";
 
-const URL_TTL_SECONDS = 60 * 60; // 1 hour
+const URL_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 
 const urlCache = new Map<string, { url: string; expiresAt: number }>();
 
 async function getSignedUrl(storagePath: string): Promise<string | null> {
   const cached = urlCache.get(storagePath);
-  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.url;
+  // Refresh well before actual expiry so a stale URL never reaches the user.
+  if (cached && cached.expiresAt > Date.now() + 5 * 60_000) return cached.url;
 
   const supabase = createClient();
   const { data } = await supabase.storage
@@ -23,6 +24,14 @@ async function getSignedUrl(storagePath: string): Promise<string | null> {
     expiresAt: Date.now() + URL_TTL_SECONDS * 1000,
   });
   return data.signedUrl;
+}
+
+// Mint a fresh URL on demand — used by click handlers so opening an image
+// in a new tab works even on a tab that's been open for days. Cheaper than
+// it sounds (one round-trip; cache stays warm afterwards for 24h).
+async function getFreshSignedUrl(storagePath: string): Promise<string | null> {
+  urlCache.delete(storagePath);
+  return getSignedUrl(storagePath);
 }
 
 export function AttachmentView({ attachment }: { attachment: Attachment }) {
@@ -54,7 +63,13 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
   switch (attachment.kind) {
     case "image":
       return (
-        <a href={url} target="_blank" rel="noreferrer" className="block max-w-full">
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => openFresh(e, attachment.storage_path)}
+          className="block max-w-full"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
@@ -118,6 +133,7 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
           href={url}
           target="_blank"
           rel="noreferrer"
+          onClick={(e) => openFresh(e, attachment.storage_path)}
           className="flex w-full max-w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm hover:bg-zinc-50 md:max-w-sm dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
         >
           <FileIcon />
@@ -133,6 +149,27 @@ export function AttachmentView({ attachment }: { attachment: Attachment }) {
           </div>
         </a>
       );
+  }
+}
+
+// Click handler that mints a fresh signed URL right before navigating, so a
+// stale URL never reaches the browser when the chat tab has been open for
+// hours/days. Falls back to letting the original href fire if the refresh
+// fails for any reason (offline, etc.).
+async function openFresh(
+  e: React.MouseEvent<HTMLAnchorElement>,
+  storagePath: string | null,
+) {
+  if (!storagePath) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  e.preventDefault();
+  const fresh = await getFreshSignedUrl(storagePath);
+  if (fresh) {
+    window.open(fresh, "_blank", "noopener,noreferrer");
+  } else {
+    // Last-resort: let the original (possibly stale) URL handle it.
+    const originalHref = e.currentTarget.href;
+    if (originalHref) window.open(originalHref, "_blank", "noopener,noreferrer");
   }
 }
 
