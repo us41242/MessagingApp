@@ -22,10 +22,6 @@ export const metadata: Metadata = {
     title: "Messages",
     statusBarStyle: "black-translucent",
   },
-  icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
-  },
 };
 
 export const viewport = {
