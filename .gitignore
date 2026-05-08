@@ -40,6 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Supabase CLI scratch (created by `supabase link` / `supabase db push`)
+/supabase/.temp/
+/supabase/.branches/
+
 # Capacitor / Android build outputs (committed source stays; build artifacts don't)
 /android/.gradle/
 /android/.idea/
