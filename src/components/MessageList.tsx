@@ -9,12 +9,14 @@ export function MessageList({
   conversationId,
   messages,
   meId,
+  readByOthers,
   onEdit,
   onDelete,
 }: {
   conversationId: string;
   messages: MessageWithAttachments[];
   meId: string;
+  readByOthers: Set<string>;
   onEdit: (id: string, body: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
@@ -69,7 +71,7 @@ export function MessageList({
             <div key={m.id}>
               {showDate ? (
                 <div className="my-4 flex justify-center">
-                  <span className="rounded-full bg-zinc-200 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                  <span className="rounded-full bg-zinc-200 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                     {formatDayHeader(m.sent_at)}
                   </span>
                 </div>
@@ -79,6 +81,7 @@ export function MessageList({
                   message={m}
                   meId={meId}
                   groupedWithPrev={!!samePrevSender}
+                  isReadByOther={readByOthers.has(m.id)}
                   isEditing={editingId === m.id}
                   onStartEdit={() => setEditingId(m.id)}
                   onCancelEdit={() => setEditingId(null)}

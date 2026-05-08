@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatListTime } from "@/lib/format";
+import { LastSeenLabel } from "@/components/LastSeenLabel";
 
 export interface SidebarItem {
   id: string;
@@ -10,6 +11,7 @@ export interface SidebarItem {
   avatar_url: string | null;
   last_message_at: string;
   isTelegram: boolean;
+  otherLastSeenAt: string | null;
 }
 
 export function SidebarConversations({
@@ -58,11 +60,14 @@ export function SidebarConversations({
                     {formatListTime(c.last_message_at)}
                   </span>
                 </div>
-                {c.isTelegram ? (
-                  <span className="text-[10px] uppercase tracking-wide text-sky-500">
-                    Telegram
-                  </span>
-                ) : null}
+                <div className="flex items-center gap-2">
+                  <LastSeenLabel iso={c.otherLastSeenAt} />
+                  {c.isTelegram ? (
+                    <span className="text-[10px] uppercase tracking-wide text-sky-500">
+                      Telegram
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </Link>
           </li>

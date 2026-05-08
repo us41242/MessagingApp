@@ -10,6 +10,7 @@ export function MessageBubble({
   message,
   meId,
   groupedWithPrev,
+  isReadByOther,
   isEditing,
   onStartEdit,
   onCancelEdit,
@@ -20,6 +21,7 @@ export function MessageBubble({
   message: MessageWithAttachments;
   meId: string;
   groupedWithPrev: boolean;
+  isReadByOther: boolean;
   isEditing: boolean;
   onStartEdit: () => void;
   onCancelEdit: () => void;
@@ -46,7 +48,7 @@ export function MessageBubble({
         }`}
       >
         {!groupedWithPrev && !isMine ? (
-          <div className="mb-1 px-1 text-xs font-medium text-zinc-500">
+          <div className="mb-1 px-1 text-sm font-medium text-zinc-500">
             {message.sender?.display_name || "—"}
           </div>
         ) : null}
@@ -85,7 +87,7 @@ export function MessageBubble({
                 autoFocus
                 onChange={(e) => setDraft(e.target.value)}
                 rows={Math.min(6, draft.split("\n").length + 1)}
-                className="w-72 rounded-2xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-72 rounded-2xl border border-zinc-300 bg-white px-3 py-2 text-base outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
               />
               <div className="flex gap-2 self-end">
                 <button
@@ -105,7 +107,7 @@ export function MessageBubble({
             </form>
           ) : (
             <div
-              className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
+              className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-[1.05rem] leading-relaxed ${
                 isMine
                   ? "bg-blue-600 text-white"
                   : "bg-white text-zinc-900 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800"
@@ -117,11 +119,22 @@ export function MessageBubble({
         ) : null}
 
         <div
-          className={`mt-1 flex items-center gap-2 px-1 text-[10px] uppercase tracking-wide text-zinc-400 ${
+          className={`mt-1 flex items-center gap-2 px-1 text-[11px] uppercase tracking-wide text-zinc-400 ${
             isMine ? "flex-row-reverse" : ""
           }`}
         >
           <span>{formatTime(message.sent_at)}</span>
+          {isMine ? (
+            <span
+              aria-label={isReadByOther ? "Read" : "Sent"}
+              title={isReadByOther ? "Read" : "Sent"}
+              className={`text-[12px] leading-none ${
+                isReadByOther ? "text-blue-500" : "text-zinc-400"
+              }`}
+            >
+              {isReadByOther ? "✓✓" : "✓"}
+            </span>
+          ) : null}
           {message.edited_at ? (
             <button
               type="button"

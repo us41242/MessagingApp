@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatListTime } from "@/lib/format";
+import { LastSeenLabel } from "@/components/LastSeenLabel";
 import type { ConversationListItem } from "@/lib/conversations";
 
 export function MobileHomeList({
@@ -51,11 +52,14 @@ export function MobileHomeList({
                       {formatListTime(c.last_message_at)}
                     </span>
                   </div>
-                  {c.isTelegram ? (
-                    <span className="text-[10px] uppercase tracking-wide text-sky-500">
-                      Telegram
-                    </span>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <LastSeenLabel iso={c.otherLastSeenAt} />
+                    {c.isTelegram ? (
+                      <span className="text-[10px] uppercase tracking-wide text-sky-500">
+                        Telegram
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </Link>
             </li>

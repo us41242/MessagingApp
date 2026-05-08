@@ -53,6 +53,8 @@ function formatRecTime(ms: number): string {
 export function Composer({
   conversationId,
   meId,
+  othersTyping,
+  onTyping,
   onOptimisticInsert,
   onReplaceMessage,
   onRemoveOptimistic,
@@ -61,6 +63,8 @@ export function Composer({
 }: {
   conversationId: string;
   meId: string;
+  othersTyping?: boolean;
+  onTyping?: (typing: boolean) => void;
   onOptimisticInsert: (m: MessageWithAttachments) => void;
   onReplaceMessage: (oldId: string, real: MessageWithAttachments) => void;
   onRemoveOptimistic: (optimisticId: string) => void;
@@ -80,6 +84,26 @@ export function Composer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Typing presence: announce true on each keystroke (parent throttles),
+  // schedule a follow-up false after a short idle period so the pulse
+  // clears on the other side without waiting for the receiver's safety
+  // timeout.
+  const typingIdleRef = useRef<number | null>(null);
+  const stopTyping = () => {
+    if (typingIdleRef.current != null) {
+      window.clearTimeout(typingIdleRef.current);
+      typingIdleRef.current = null;
+    }
+    onTyping?.(false);
+  };
+  useEffect(() => {
+    return () => {
+      if (typingIdleRef.current != null) {
+        window.clearTimeout(typingIdleRef.current);
+      }
+    };
+  }, []);
 
   // Trigger one of the Brivo gates via the messaging-app proxy at
   // /api/gates/unlock. Same-origin so no CORS dance, server-side fetch
@@ -245,6 +269,7 @@ export function Composer({
     const body = text.trim() || null;
     if (!body && pending.length === 0) return;
     setBusy(true);
+    stopTyping();
     try {
       await sendMessage({ body, files: pending, location: null });
       setText("");
@@ -523,10 +548,23 @@ export function Composer({
             <textarea
               ref={textareaRef}
               rows={1}
-              placeholder="Message"
+              placeholder={othersTyping ? "Typing…" : "Message"}
               value={text}
               disabled={busy}
-              onChange={(e) => setText(e.target.value)}
+              data-typing={othersTyping ? "true" : undefined}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.length > 0) {
+                  onTyping?.(true);
+                  if (typingIdleRef.current != null) {
+                    window.clearTimeout(typingIdleRef.current);
+                  }
+                  typingIdleRef.current = window.setTimeout(stopTyping, 3000);
+                } else {
+                  stopTyping();
+                }
+              }}
+              onBlur={stopTyping}
               onFocus={() => setActionsOpen(false)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -724,17 +762,27 @@ function CarIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 24 24"
+      viewBox="0 0 1000 1000"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="16.67"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M5 17H3v-5l2-5h14l2 5v5h-2" />
-      <path d="M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z" />
-      <path d="M15 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z" />
-      <path d="M5 12h14" />
+      <path d="M243,418L254,563" />
+      <path d="M362,299L369,447" />
+      <path d="M474,185L488,324" />
+      <path d="M575,86L590,227" />
+      <path d="M599.956,310L764,315L862.003,551C862.003,551 874,509 890,498C906,487 943.167,479.333 958,485C972.833,490.667 971,551 971,551L901,563" />
+      <path d="M493,746L645,746" />
+      <path d="M445,652.056L678,652.056" />
+      <path d="M269,989C269,989 341.574,996.766 342,976C343.167,919.167 342,875 342,875" />
+      <path d="M792,875C792,875 792.667,933 794,970C795.04,998.851 933.019,1003.989 932,958C930.566,893.25 929.394,648.5 929.394,648.5" />
+      <path d="M28,989L27,632C27,632 25.352,551.015 111.5,551C194.721,550.985 196,632 196,632L196,989L28,989Z" />
+      <path d="M101,551L646,12L726,89L196,636" />
+      <path d="M280,653C296.752,650.306 310.442,654.21 322.798,654.432C388.658,655.614 386.499,746 386.499,746L269,745" strokeWidth="25" />
+      <path d="M386.499,551L851,551C911.221,554.559 932.652,592.018 929,651.396C929,651.396 864.333,647.629 797,651.396C762.867,653.306 747,746 747,746L928,746" />
+      <path d="M269,862C269,862 750.275,864.281 862.003,862C947.047,860.264 929.394,746 929.394,746" />
     </svg>
   );
 }

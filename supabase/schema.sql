@@ -47,9 +47,12 @@ create table public.profiles (
   is_ghost      boolean not null default false,
   -- maps a Telegram user id to this profile so imports attach correctly
   telegram_id   bigint unique,
+  -- updated by the client heartbeat; powers "last seen Xm ago" / "online"
+  last_seen_at  timestamptz,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+create index profiles_last_seen_idx on public.profiles(last_seen_at desc);
 
 -- conversations: 1:1 thread between two users (group support deferred)
 create table public.conversations (
@@ -495,3 +498,4 @@ where p.id is null;
 alter publication supabase_realtime add table public.messages;
 alter publication supabase_realtime add table public.attachments;
 alter publication supabase_realtime add table public.conversations;
+alter publication supabase_realtime add table public.message_reads;

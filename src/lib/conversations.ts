@@ -6,14 +6,20 @@ export interface ConversationListItem {
   avatar_url: string | null;
   last_message_at: string;
   isTelegram: boolean;
+  // last_seen_at of the other 1:1 member, if known. Null for empty
+  // conversations or members who never heartbeated.
+  otherLastSeenAt: string | null;
 }
 
+type ProfileBit = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  last_seen_at: string | null;
+};
 type MemberRow = {
   profile_id: string;
-  profiles:
-    | { id: string; display_name: string | null; avatar_url: string | null }
-    | null
-    | Array<{ id: string; display_name: string | null; avatar_url: string | null }>;
+  profiles: ProfileBit | null | Array<ProfileBit>;
 };
 type ConvoRow = {
   id: string;
@@ -38,7 +44,7 @@ export async function fetchConversationsForUser(
         title,
         last_message_at,
         telegram_chat_id,
-        members:conversation_members!inner ( profile_id, profiles ( id, display_name, avatar_url ) )
+        members:conversation_members!inner ( profile_id, profiles ( id, display_name, avatar_url, last_seen_at ) )
       `
     )
     .order("last_message_at", { ascending: false });
@@ -57,6 +63,7 @@ export async function fetchConversationsForUser(
       avatar_url: other?.avatar_url ?? null,
       last_message_at: c.last_message_at,
       isTelegram: c.telegram_chat_id != null,
+      otherLastSeenAt: other?.last_seen_at ?? null,
     };
   });
 }

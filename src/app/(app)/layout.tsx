@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SidebarConversations } from "@/components/SidebarConversations";
 import { NewMessageWatcher } from "@/components/NewMessageWatcher";
+import { LastSeenHeartbeat } from "@/components/LastSeenHeartbeat";
 import { fetchConversationsForUser } from "@/lib/conversations";
 
 // Layout reads cookies + per-user data; force dynamic so Next 16 doesn't
@@ -52,6 +53,7 @@ export default async function AppLayout({
         </footer>
       </aside>
       <section className="flex flex-1 flex-col overflow-hidden">{children}</section>
+      <LastSeenHeartbeat meId={userData.user.id} />
     </div>
   );
 }

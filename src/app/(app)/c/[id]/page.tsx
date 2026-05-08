@@ -23,7 +23,7 @@ export default async function ConversationPage({
     .select(
       `
         id, title, telegram_chat_id, last_message_at,
-        members:conversation_members ( profile_id, profiles ( id, display_name, avatar_url ) )
+        members:conversation_members ( profile_id, profiles ( id, display_name, avatar_url, last_seen_at ) )
       `
     )
     .eq("id", id)
@@ -31,12 +31,15 @@ export default async function ConversationPage({
 
   if (!convo) notFound();
 
+  type MemberProfile = {
+    id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    last_seen_at: string | null;
+  };
   type MemberRow = {
     profile_id: string;
-    profiles:
-      | { id: string; display_name: string | null; avatar_url: string | null }
-      | null
-      | Array<{ id: string; display_name: string | null; avatar_url: string | null }>;
+    profiles: MemberProfile | null | Array<MemberProfile>;
   };
   const oneProfile = (m: MemberRow) =>
     Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null;
@@ -69,6 +72,7 @@ export default async function ConversationPage({
     <Thread
       conversationId={convo.id}
       headerTitle={headerTitle}
+      headerLastSeenIso={others[0]?.last_seen_at ?? null}
       meId={me.id}
       initialMessages={initialMessages}
     />

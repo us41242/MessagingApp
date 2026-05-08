@@ -40,6 +40,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex h-dvh flex-col overflow-hidden">
         <PushRegistration />

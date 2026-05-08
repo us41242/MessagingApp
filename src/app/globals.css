@@ -19,15 +19,28 @@
   }
 }
 
-/* Bump root font-size ~10% so every Tailwind rem-based size grows
+/* Bump root font-size ~15% so every Tailwind rem-based size grows
    proportionally — text, button heights, paddings, gaps all increase
-   together. Tweak between 16px (default) and 18px (~12.5% bigger) to taste. */
+   together. Tweak between 16px (default) and 19px (~19% bigger) to taste. */
 html {
-  font-size: 17.5px;
+  font-size: 18.5px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Composer typing pulse: when the other person is typing, the input
+   wrapper gets data-typing="true" and emits an outward blue ring that
+   matches the outgoing-message bubble color (blue-600 = #2563eb). */
+@keyframes composerTypingPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(37, 99, 235, 0.45); }
+  70%  { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);    }
+  100% { box-shadow: 0 0 0 0   rgba(37, 99, 235, 0);    }
+}
+[data-typing="true"] {
+  animation: composerTypingPulse 1.4s ease-out infinite;
+  border-color: rgb(37, 99, 235) !important;
 }

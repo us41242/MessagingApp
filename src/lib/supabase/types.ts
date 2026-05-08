@@ -21,8 +21,15 @@ export interface Profile {
   avatar_url: string | null;
   is_ghost: boolean;
   telegram_id: number | null;
+  last_seen_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface MessageRead {
+  message_id: string;
+  profile_id: string;
+  read_at: string;
 }
 
 export interface Conversation {
