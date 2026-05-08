@@ -712,11 +712,8 @@ async function readDimensions(p: PendingFile): Promise<{
 }
 
 function PaperclipIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-    </svg>
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/icons/attachment.svg" alt="" className={className} draggable={false} />;
 }
 function PinIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
@@ -727,22 +724,8 @@ function PinIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 function MicIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="9" y="3" width="6" height="12" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0" />
-      <path d="M12 18v3" />
-      <path d="M9 21h6" />
-    </svg>
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/icons/microphone.svg" alt="" className={className} draggable={false} />;
 }
 function PlusIcon() {
   return (
@@ -759,62 +742,14 @@ function PlusIcon() {
   );
 }
 function CarIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 1000 1000"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="16.67"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M243,418L254,563" />
-      <path d="M362,299L369,447" />
-      <path d="M474,185L488,324" />
-      <path d="M575,86L590,227" />
-      <path d="M599.956,310L764,315L862.003,551C862.003,551 874,509 890,498C906,487 943.167,479.333 958,485C972.833,490.667 971,551 971,551L901,563" />
-      <path d="M493,746L645,746" />
-      <path d="M445,652.056L678,652.056" />
-      <path d="M269,989C269,989 341.574,996.766 342,976C343.167,919.167 342,875 342,875" />
-      <path d="M792,875C792,875 792.667,933 794,970C795.04,998.851 933.019,1003.989 932,958C930.566,893.25 929.394,648.5 929.394,648.5" />
-      <path d="M28,989L27,632C27,632 25.352,551.015 111.5,551C194.721,550.985 196,632 196,632L196,989L28,989Z" />
-      <path d="M101,551L646,12L726,89L196,636" />
-      <path d="M280,653C296.752,650.306 310.442,654.21 322.798,654.432C388.658,655.614 386.499,746 386.499,746L269,745" strokeWidth="25" />
-      <path d="M386.499,551L851,551C911.221,554.559 932.652,592.018 929,651.396C929,651.396 864.333,647.629 797,651.396C762.867,653.306 747,746 747,746L928,746" />
-      <path d="M269,862C269,862 750.275,864.281 862.003,862C947.047,860.264 929.394,746 929.394,746" />
-    </svg>
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/icons/entry-gates.svg" alt="" className={className} draggable={false} />;
 }
 function SearchIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/icons/search.svg" alt="" className={className} draggable={false} />;
 }
 function CameraIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M14.5 4h-5l-2 3H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5l-2-3z" />
-      <circle cx="12" cy="13" r="3.5" />
-    </svg>
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/icons/camera.svg" alt="" className={className} draggable={false} />;
 }
