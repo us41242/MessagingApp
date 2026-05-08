@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatListTime } from "@/lib/format";
 import { LastSeenLabel } from "@/components/LastSeenLabel";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import type { ConversationListItem } from "@/lib/conversations";
 
 export function MobileHomeList({
@@ -35,7 +36,8 @@ export function MobileHomeList({
           </Link>
         </div>
       ) : (
-        <ul className="flex-1 divide-y divide-zinc-100 overflow-y-auto bg-white dark:divide-zinc-900 dark:bg-zinc-950">
+        <PullToRefresh className="flex-1 bg-white dark:bg-zinc-950">
+        <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
           {conversations.map((c) => (
             <li key={c.id}>
               <Link
@@ -65,6 +67,7 @@ export function MobileHomeList({
             </li>
           ))}
         </ul>
+        </PullToRefresh>
       )}
 
       <footer className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
