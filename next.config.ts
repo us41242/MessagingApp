@@ -7,9 +7,9 @@ const nextConfig: NextConfig = {
   // page because hydration assets get cross-origin-blocked.
   allowedDevOrigins: [
     "messages.local",
-    "macmini",
-    "macmini.taile307c.ts.net",
-    "100.99.231.54",
+    "joshuas-mac-mini",
+    "joshuas-mac-mini.taile307c.ts.net",
+    "100.93.174.112",
   ],
 };
 
